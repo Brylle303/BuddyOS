@@ -30,7 +30,7 @@ gdt_descriptor:
     dw gdt_end - gdt_start - 1
     dd gdt_start
 
-; --- 32-Bit Protected Mode Kernel ---
+; 32-Bit Protected Mode Kernel
 [BITS 32]
 init_32:
     mov ax, 0x10            ; Load data segment selector (0x10) into all data segments
@@ -40,22 +40,36 @@ init_32:
     mov gs, ax
     mov ss, ax
     mov esp, 0x90000        ; Set stack pointer at 576 KB mark
-    
+
     call clear_screen
 
     mov esi, msg_kernel
-    mov esi, msg_os1
-    mov esi, msg_os2
     mov edi, 0xB8000        ; VGA text-mode buffer address
     mov ah, 0x0A            ; Light green text on black background
+    call .print_vga
+    
+    mov esi, msg_os1
+    mov edi, 0xB8000 + 160  ; VGA text-mode buffer address
+    mov ah, 0x0A            ; Light green text on black background
+    call .print_vga
+
+    mov esi, msg_os2
+    mov edi, 0xB8000 + 320  ; VGA text-mode buffer address
+    mov ah, 0x0A            ; Light green text on black background
+    call .print_vga
+    jmp kernel_idle
 
 .print_vga:
     lodsb
     test al, al
-    jz kernel_idle
+    jnz .done
+    ret
+
+.done:
     mov [edi], ax           ; Write 2 bytes: [ASCII char][color attribute]
     add edi, 2
     jmp .print_vga
+
 
 kernel_idle:
     hlt                     ; Wait for hardware interrupts (timer/keyboard)
