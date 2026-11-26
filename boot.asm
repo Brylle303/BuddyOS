@@ -14,9 +14,9 @@ mov sp, 0x7C00
 mov si, msg_boot
 call print_string
 
-; Load kernel (8 sectors = 4096 bytes) from Sector 2 to 0x0000:0x8000
+; Load kernel (16 sectors = 8192 bytes) from Sector 2 to 0x0000:0x8000
 mov ah, 0x02 ; BIOS read sectors function
-mov al, 8 ; Number of sectors to read
+mov al, 16 ; Number of sectors to read
 mov ch, 0 ; Cylinder 0
 mov cl, 2 ; Start at Sector 2 (Sector 1 is this bootloader)
 mov dh, 0 ; Head 0
