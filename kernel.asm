@@ -44,13 +44,7 @@ init_32:
     call clear_screen
 
     mov esi, msg_kernel
-    mov edi, 0xB8000        ; VGA text-mode buffer address
-    mov ah, 0x0A            ; Light green text on black background
-
     mov esi, msg_os1
-    mov edi, 0xB8000        ; VGA text-mode buffer address
-    mov ah, 0x0A            ; Light green text on black background
-
     mov esi, msg_os2
     mov edi, 0xB8000        ; VGA text-mode buffer address
     mov ah, 0x0A            ; Light green text on black background
@@ -74,7 +68,7 @@ clear_screen:
     rep stosw
     ret
 
-msg_kernel db "[Kernel Online: 32-bit Protected Mode Ready!]", 0
+msg_kernel db "[Kernel Online: 32-bit Protected Mode]", 0
 msg_os1 db "Buddysoft BuddyOS [Version 1.000]", 0
 msg_os2 db "Buddysoft Corporation. All rights reserved.", 0
 
