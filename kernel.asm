@@ -453,24 +453,24 @@ kernel_idle:
     hlt                     ; Wait for hardware interrupts (timer/keyboard)
     jmp kernel_idle
 
-; --- Console state and strings ---
+; Console state and strings
 vga_row    db 0
 vga_col    db 0
-vga_attr   db 0x0A          ; Light green text on black background
+vga_attr   db 0x0F          ; White text on black background
 hex_digits db "0123456789ABCDEF"
 
 shift_state db 0
 cmd_buf     times 64 db 0
 cmd_len     db 0
 
-; --- Interrupt Descriptor Table ---
+;  Interrupt Descriptor Table 
 idt:
     times 256*8 db 0
 idt_descriptor:
     dw 256*8 - 1
     dd idt
 
-; --- Scancode set 1 -> ASCII tables (0 = not printable) ---
+;  Scancode set 1 -> ASCII tables (0 = not printable) 
 scancode_table:
     db 0, 0, '1','2','3','4','5','6','7','8','9','0','-','=', 0, 0
     db 'q','w','e','r','t','y','u','i','o','p','[',']', 0, 0, 'a','s'
@@ -496,7 +496,7 @@ msg_kernel db "[Kernel Online: 32-bit Protected Mode]", 0
 msg_os1 db "Buddysoft BuddyOS [Version 1.000]", 0
 msg_os2 db "Buddysoft Corporation. All rights reserved.", 0
 
-msg_prompt db "> ", 0
+msg_prompt db "C:\User> ", 0
 msg_unknown db "Unknown command", 10, 0
 
 cmd_menu_lit db "menu", 0
