@@ -40,7 +40,7 @@ init_32:
     mov gs, ax
     mov ss, ax
     mov esp, 0x90000        ; Set stack pointer at 576 KB mark
-
+    
     call clear_screen
 
     mov esi, msg_kernel
