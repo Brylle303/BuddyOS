@@ -1,5 +1,6 @@
 # BuddyOS
 
+hi this is vince first time trying git pull:DD
 > A minimal x86 operating system built from scratch in NASM assembly, designed to
 > implement the **buddy memory allocation algorithm**. Built for **CPE 3106**.
 
