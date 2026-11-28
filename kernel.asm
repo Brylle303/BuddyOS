@@ -73,6 +73,10 @@ init_32:
     call kbd_init           ; IRQ1, circular key buffer
     mov esi, msg_ok_kbd
     call print_string
+    call ipc_boot           ; [IPC] mailboxes ready, pid 0 = shell
+    call tasks_init         ; [TASKS] current code = task 0
+    mov esi, msg_ok_ipc     ; [IPC]
+    call print_string       ; [IPC]
     sti                     ; Enable interrupts
 
     call print_prompt
@@ -303,6 +307,10 @@ process_command:
     jnc .done
     call io_command         ; CF=0 if it was an interrupt/IO command
     jnc .done
+    call ipc_command        ; [IPC] CF=0 if it was an IPC command
+    jnc .done               ; [IPC]
+    call task_command       ; [TASKS] CF=0 if it was a task command
+    jnc .done               ; [TASKS]
     mov esi, cmd_buf
     mov edi, cmd_menu_lit
     call str_eq_ci
@@ -398,6 +406,7 @@ msg_ok_idt db "[ OK ] IDT loaded (256 gates)", 10, 0
 msg_ok_pic db "[ OK ] PIC remapped: IRQ0-15 -> vectors 32-47", 10, 0
 msg_ok_pit db "[ OK ] PIT timer running at 100 Hz (IRQ0)", 10, 0
 msg_ok_kbd db "[ OK ] Keyboard driver ready (IRQ1)", 10, 0
+msg_ok_ipc db "[ OK ] IPC mailboxes ready (8 processes)", 10, 0   ; [IPC]
 
 msg_prompt db "C:\User> ", 0
 msg_unknown db "Unknown command", 10, 0
@@ -410,7 +419,7 @@ msg_menu db "=== MENU ===", 10
          db "1. Buddy Memory Management", 10
          db "2. Interrupt Driven IO Management", 10
          db "3. IPC Message Passing", 10
-         db "Type 1 for memory commands, 2 for interrupt/IO commands (3 not yet implemented)", 10, 0
+         db "Type 1 for memory commands, 2 for interrupt/IO commands, 3 for IPC commands", 10, 0   ; [IPC]
 
 msg_version db "Version 1.000 (build 2026)", 10, 0
 
@@ -434,6 +443,10 @@ msg_credits db "=== CREDITS ===", 10
 %include "keyboard.asm"
 %include "io_map.asm"
 %include "iocmd.asm"
+
+; --- IPC message passing ---                                   ; [IPC]
+%include "msgpassing.asm"                                        ; [IPC]
+%include "tasking.asm"                                           ; [TASKS]
 
 ; Pad kernel to exactly 24576 bytes (48 sectors) so INT 13h reads cleanly
 times 24576 - ($ - $$) db 0
