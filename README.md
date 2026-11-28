@@ -21,6 +21,9 @@ memory management subsystem.
 
 - 16-bit real-mode BIOS bootloader that loads the kernel from disk
 - Minimal flat GDT and transition to 32-bit protected mode
+- A20 line enabled by the bootloader
+- Buddy memory allocator: 2 MB pool, 64-byte minimum block, split and coalesce
+- Interrupt-driven keyboard input and command shell
 - VGA text-mode screen clear and power-on banner
 - Simple, dependency-light build pipeline (NASM + QEMU)
 
@@ -40,9 +43,11 @@ memory management subsystem.
 BuddyOS/
 ├── boot.asm        # 16-bit real-mode bootloader (loads kernel, jumps to 0x8000)
 ├── kernel.asm      # 32-bit protected-mode kernel entry (GDT, VGA output)
+├── buddy.asm       # Buddy memory allocator
+├── memcmd.asm      # Shell commands for the allocator
 ├── build.bat       # Assembles both files, links image, launches QEMU
 ├── boot.bin        # Assembled bootloader (512 bytes)
-├── kernel.bin      # Assembled kernel (1024 bytes)
+├── kernel.bin      # Assembled kernel (16384 bytes)
 ├── os-image.bin    # Combined bootable disk image (boot.bin + kernel.bin)
 └── README.md
 ```
@@ -50,10 +55,38 @@ BuddyOS/
 ## Boot Flow
 
 1. BIOS loads the boot sector at `0x7C00`.
-2. `boot.asm` reads 2 sectors (the kernel) from disk to `0x0000:0x8000` via `INT 0x13`.
+2. `boot.asm` reads 32 sectors (the kernel) to `0x0000:0x8000` via `INT 0x13` and enables A20.
 3. `kernel.asm` loads the GDT, sets the `CR0` protection-enable bit, and far-jumps into 32-bit mode.
 4. Segment registers and the stack (`0x90000`) are initialized.
-5. The VGA text buffer (`0xB8000`) is cleared, the banner is printed, and the CPU halts.
+5. The screen is cleared, the banner is printed, the allocator, PIC and IDT are set up,
+   and the kernel waits for commands.
+
+## Memory Commands
+
+| Command | Action |
+|---|---|
+| `alloc NAME SIZE` | Allocate (bytes, or with K / M) |
+| `free NAME` | Free a named block |
+| `freeaddr HEX` | Free by address (tests pointer checks) |
+| `list` / `dump` | Show named blocks / the whole pool |
+| `reset` | Reinitialize the pool (frees **everything**) |
+| `1` or `help` | Show these commands |
+
+### Allocator API
+
+`buddy_alloc`: EAX = bytes, returns EAX = address. `buddy_free`: EAX = address.
+CF set means error, with the code in EAX (1 zero size, 2 too big, 3 out of memory,
+4 bad pointer, 5 double free). Do not call these from interrupt handlers.
+
+### Memory Map
+
+| Range | Use |
+|---|---|
+| `0x7C00` | Boot sector |
+| `0x8000`-`0xBFFF` | Kernel |
+| `0x20000`-`0x27FFF` | Allocator map |
+| below `0x90000` | Stack |
+| `0x100000`-`0x2FFFFF` | Buddy pool (2 MB) |
 
 ## Prerequisites
 
@@ -81,11 +114,11 @@ qemu-system-i386 -drive format=raw,file=os-image.bin
 - [x] 16-bit bootloader
 - [x] GDT + 32-bit protected mode
 - [x] VGA text-mode output
-- [ ] A20 line enable
+- [x] A20 line enable
 - [ ] BIOS E820 physical memory map
-- [ ] Buddy memory allocator (split / coalesce / alloc / free)
+- [x] Buddy memory allocator (split / coalesce / alloc / free)
 - [ ] IDT + PIC + exception/IRQ handling
-- [ ] Keyboard driver and shell
+- [x] Keyboard driver and shell
 - [ ] Allocator visualizer
 
 ## Team — Deadlockz

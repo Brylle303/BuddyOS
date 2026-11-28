@@ -57,6 +57,7 @@ init_32:
     call print_string
     call newline
 
+    call buddy_init         ; 2 MB pool at 0x100000
     call pic_remap
     call idt_init
     sti                     ; Enable interrupts (keyboard now wakes the CPU)
@@ -293,6 +294,12 @@ isr_keyboard:
 
 ; Handle a scancode in AL
 keyboard_handler:
+    cmp byte [line_ready], 0 ; a command is still running
+    je .accept
+    cmp al, 0x80            ; ignore new key presses, but keep releases
+    jae .release
+    ret
+.accept:
     cmp al, 0x80
     jae .release
     cmp al, 0x2A            ; Left shift
@@ -327,9 +334,7 @@ keyboard_handler:
     call putchar
     movzx ecx, byte [cmd_len]
     mov byte [cmd_buf + ecx], 0
-    call process_command
-    mov byte [cmd_len], 0
-    call print_prompt
+    mov byte [line_ready], 1 ; kernel_idle runs the command
     jmp .done
 .backspace:
     mov bl, [cmd_len]
@@ -386,6 +391,8 @@ print_prompt:
 process_command:
     cmp byte [cmd_len], 0
     je .done
+    call mem_command        ; CF=0 if it was a memory command
+    jnc .done
     mov esi, cmd_buf
     mov edi, cmd_menu_lit
     call str_eq_ci
@@ -450,7 +457,18 @@ str_eq_ci:
     ret
 
 kernel_idle:
-    hlt                     ; Wait for hardware interrupts (timer/keyboard)
+    cli                     ; check the flag without racing the ISR
+    cmp byte [line_ready], 0
+    jne .run
+    sti                     ; STI takes effect after HLT starts,
+    hlt                     ; so a key press cannot be missed
+    jmp kernel_idle
+.run:
+    sti
+    call process_command
+    mov byte [cmd_len], 0
+    call print_prompt
+    mov byte [line_ready], 0
     jmp kernel_idle
 
 ; Console state and strings
@@ -462,6 +480,7 @@ hex_digits db "0123456789ABCDEF"
 shift_state db 0
 cmd_buf     times 64 db 0
 cmd_len     db 0
+line_ready  db 0
 
 ;  Interrupt Descriptor Table 
 idt:
@@ -507,7 +526,7 @@ msg_menu db "=== MENU ===", 10
          db "1. Buddy Memory Management", 10
          db "2. Interrupt Driven IO Management", 10
          db "3. IPC Message Passing", 10
-         db "(options not yet implemented)", 10, 0
+         db "Type 1 for memory commands (2 and 3 not yet implemented)", 10, 0
 
 msg_version db "Version 1.000 (build 2026)", 10, 0
 
@@ -518,5 +537,9 @@ msg_credits db "=== CREDITS ===", 10
             db "Vince Nino Colina", 10
             db "CPE 3106", 10, 0
 
-; Pad kernel to exactly 8192 bytes (16 sectors) so INT 13h reads cleanly
-times 8192 - ($ - $$) db 0
+; --- Buddy memory management ---
+%include "buddy.asm"
+%include "memcmd.asm"
+
+; Pad kernel to exactly 16384 bytes (32 sectors) so INT 13h reads cleanly
+times 16384 - ($ - $$) db 0
