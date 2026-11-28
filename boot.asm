@@ -14,9 +14,9 @@ mov sp, 0x7C00
 mov si, msg_boot
 call print_string
 
-; Load kernel (32 sectors = 16384 bytes) from Sector 2 to 0x0000:0x8000
+; Load kernel (48 sectors = 24576 bytes) from Sector 2 to 0x0000:0x8000
 mov ah, 0x02 ; BIOS read sectors function
-mov al, 32 ; Number of sectors to read
+mov al, 48 ; Number of sectors to read
 mov ch, 0 ; Cylinder 0
 mov cl, 2 ; Start at Sector 2 (Sector 1 is this bootloader)
 mov dh, 0 ; Head 0
@@ -55,4 +55,4 @@ msg_err db "Disk read error!", 0
 
 ; Pad bootloader to 510 bytes and append the 2-byte BIOS boot signature
 times 510 - ($ - $$) db 0
-dw 0xAA55
+dw 0xAA55
